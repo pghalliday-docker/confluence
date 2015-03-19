@@ -13,14 +13,18 @@ ENV CONFLUENCE_HOME=${ATLASSIAN_HOME}/confluence \
 ENV CONFLUENCE_URL=https://www.atlassian.com/software/confluence/downloads/binary/${CONFLUENCE_TARBALL}
 
 RUN apt-get update \
-    && apt-get install -y \
-    wget \
-    openjdk-7-jre
+    && apt-get install -y wget python-software-properties software-properties-common \
+    && add-apt-repository ppa:webupd8team/java \
+    && apt-get update \
+    && echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | /usr/bin/debconf-set-selections \
+    && apt-get install -y oracle-java7-installer
 
 RUN mkdir -p ${ATLASSIAN_HOME} \
     && groupadd -r ${CONFLUENCE_GROUP} \
     && useradd -r -g ${CONFLUENCE_GROUP} -d ${CONFLUENCE_HOME} ${CONFLUENCE_USER} \
     && mkdir -p ${CONFLUENCE_INSTALL_DIR}
+
+COPY confluence-init.properties /
 
 WORKDIR ${CONFLUENCE_INSTALL_DIR}
 RUN wget -q ${CONFLUENCE_URL} \
@@ -30,7 +34,8 @@ RUN wget -q ${CONFLUENCE_URL} \
     && ln -s ${CONFLUENCE_BASENAME} current \
     && chown -R ${CONFLUENCE_USER}:${CONFLUENCE_GROUP} current/logs \
     && chown -R ${CONFLUENCE_USER}:${CONFLUENCE_GROUP} current/temp \
-    && chown -R ${CONFLUENCE_USER}:${CONFLUENCE_GROUP} current/work
+    && chown -R ${CONFLUENCE_USER}:${CONFLUENCE_GROUP} current/work \
+    && sed "s|CONFLUENCE_HOME|${CONFLUENCE_HOME}|g" </confluence-init.properties >current/confluence/WEB-INF/classes/confluence-init.properties
 
 COPY confluence-server.xml /
 COPY docker-entrypoint.sh /
